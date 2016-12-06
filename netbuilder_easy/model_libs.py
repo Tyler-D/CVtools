@@ -712,6 +712,94 @@ def ZfaceNetBody(net, from_layer, need_fc=True, fully_conv=False, reduced=False,
             net.update(freeze_layer, kwargs)
 
     return net
+
+def LightenedfaceBody(net, from_layer, use_batchnorm=False,  freeze_layers=[]):
+    kwargs = {
+            'param': [dict(lr_mult=1, decay_mult=1), dict(lr_mult=2, decay_mult=0)],
+            'weight_filler': dict(type='xavier'),
+            'bias_filler': dict(type='constant', value=0)}
+
+    use_relu = True
+    assert from_layer in net.keys()
+    # stage 1
+    out_layer = "conv1"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 96, 5, 2, 1)
+    # net.conv1 = L.Convolution(net[from_layer], num_output=96, pad=2, kernel_size=5, **kwargs)
+    # net.relu1 = L.ReLU(net.conv1, in_place=True)
+    net.pool1 = L.Pooling(net.conv1, pool=P.Pooling.MAX, kernel_size=2, stride=2)
+
+    # stage 2
+    from_layer = "pool1"
+    out_layer = "conv2a"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 96, 1, 0, 1)
+    # net.conv2a = L.Convolution(net.pool1, num_output=96, kernel_size=1, **kwargs)
+    # net.relu2a = L.ReLU(net.conv2a, in_place=True)
+    from_layer = "conv2a"
+    out_layer = "conv2"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 192, 3, 1, 1)
+    # net.conv2 = L.Convolution(net.relu2a, num_output=192, pad=1, kernel_size=3, **kwargs)
+    # net.relu2 = L.ReLU(net.conv2, in_place=True)
+    net.pool2 = L.Pooling(net.conv2, pool=P.Pooling.MAX, kernel_size=2, stride=2)
+
+    # stage 3
+    from_layer = "pool2"
+    out_layer = "conv3a"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 192, 1, 0, 1)
+    # net.conv3a = L.Convolution(net.pool2, num_output=192, kernel_size=1, **kwargs)
+    # net.relu3a = L.ReLU(net.conv3a, in_place=True)
+    from_layer = "conv3a"
+    out_layer = "conv3"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 384, 3, 1, 1)
+    # net.conv3 = L.Convolution(net.relu3a, num_output=384, pad=1, kernel_size=3, **kwargs)
+    # net.relu3 = L.ReLU(net.conv3, in_place=True)
+    net.pool3 = L.Pooling(net.conv3, pool=P.Pooling.MAX, kernel_size=2, stride=2)
+
+    # stage 4
+    from_layer = "pool3"
+    out_layer = "conv4a"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 384, 1, 0, 1)
+    # net.conv4a = L.Convolution(net.pool3, num_output=384, kernel_size=1, **kwargs)
+    # net.relu4a = L.ReLU(net.conv4a, in_place=True)
+    from_layer = "conv4a"
+    out_layer = "conv4"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
+    # net.conv4 = L.Convolution(net.relu4a, num_output=256, pad=1, kernel_size=3, **kwargs)
+    # net.relu4 = L.ReLU(net.conv4, in_place=True)
+
+    # stage 5
+    from_layer = "conv4"
+    out_layer = "conv5a"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 1, 0, 1)
+    # net.conv5a = L.Convolution(net.relu4, num_output=256, kernel_size=1, **kwargs)
+    # net.relu5a = L.ReLU(net.conv5a, in_place=True)
+    from_layer = "conv5a"
+    out_layer = "conv5"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
+    # net.conv5 = L.Convolution(net.relu5a, num_output=256, pad=1, kernel_size=3, **kwargs)
+    # net.relu5 = L.ReLU(net.conv5, in_place=True)
+    net.pool4 = L.Pooling(net.conv5, pool=P.Pooling.MAX, kernel_size=2, stride=2)
+
+    # final stage( fully_conv )
+    from_layer = "pool4"
+    out_layer = "fc1_conv"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 6, 1)
+    # net.fc1 = L.Convolution(net.pool4, num_output=256, pad=6, kernel_size=3, dilation=6, **kwargs)
+    # net.relu_fc1 = L.ReLU(net.fc1, in_place=True)
+    from_layer = "fc1_conv"
+    out_layer = "fc2_conv"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 1, 0, 1)
+    # net.fc2 = L.Convolution(net.relu_fc1, num_output=256, kernel_size=1, **kwargs)
+    # net.relu_fc2 = L.ReLU(net.fc2, in_place=True)
+
+    # Update freeze layers.
+    kwargs['param'] = [dict(lr_mult=0, decay_mult=0), dict(lr_mult=0, decay_mult=0)]
+    layers = net.keys()
+    for freeze_layer in freeze_layers:
+        if freeze_layer in layers:
+            net.update(freeze_layer, kwargs)
+
+    return net
+
 def CreateMultiBoxHead(net, data_layer="data", num_classes=[], from_layers=[],
         use_objectness=False, normalizations=[], use_batchnorm=True,
         min_sizes=[], max_sizes=[], prior_variance = [0.1],
