@@ -922,3 +922,216 @@ def CreateMultiBoxHead(net, data_layer="data", num_classes=[], from_layers=[],
         mbox_layers.append(net[name])
 
     return mbox_layers
+
+def DeconvBNLayer(net, from_layer, out_layer, use_bn, use_relu, num_output,
+    kernel_size, pad, stride, use_scale=True, eps=0.001, conv_prefix='', conv_postfix='',
+    bn_prefix='', bn_postfix='_bn', scale_prefix='', scale_postfix='_scale',
+    bias_prefix='', bias_postfix='_bias'):
+  if use_bn:
+    # parameters for convolution layer with batchnorm.
+    kwargs = {
+        'param': [dict(lr_mult=1, decay_mult=1)],
+        'weight_filler': dict(type='gaussian', std=0.01),
+        'bias_term': False,
+        }
+    # parameters for batchnorm layer.
+    bn_kwargs = {
+        'param': [dict(lr_mult=0, decay_mult=0), dict(lr_mult=0, decay_mult=0), dict(lr_mult=0, decay_mult=0)],
+        'eps': eps,
+        }
+    # parameters for scale bias layer after batchnorm.
+    if use_scale:
+      sb_kwargs = {
+          'bias_term': True,
+          'param': [dict(lr_mult=1, decay_mult=1), dict(lr_mult=1, decay_mult=0)],
+          'filler': dict(type='constant', value=1.0),
+          'bias_filler': dict(type='constant', value=0.0),
+          }
+    else:
+      bias_kwargs = {
+          'param': [dict(lr_mult=1, decay_mult=0)],
+          'filler': dict(type='constant', value=0.0),
+          }
+  else:
+    kwargs = {
+        'param': [dict(lr_mult=1, decay_mult=1), dict(lr_mult=2, decay_mult=0)],
+        'weight_filler': dict(type='xavier'),
+        'bias_filler': dict(type='constant', value=0)
+        }
+
+  conv_name = '{}{}{}'.format(conv_prefix, out_layer, conv_postfix)
+  [kernel_h, kernel_w] = UnpackVariable(kernel_size, 2)
+  [pad_h, pad_w] = UnpackVariable(pad, 2)
+  [stride_h, stride_w] = UnpackVariable(stride, 2)
+  if kernel_h == kernel_w:
+    net[conv_name] = L.Convolution(net[from_layer], num_output=num_output,
+        kernel_size=kernel_h, pad=pad_h, stride=stride_h, **kwargs)
+  else:
+    net[conv_name] = L.Convolution(net[from_layer], num_output=num_output,
+        kernel_h=kernel_h, kernel_w=kernel_w, pad_h=pad_h, pad_w=pad_w,
+        stride_h=stride_h, stride_w=stride_w, **kwargs)
+  if use_bn:
+    bn_name = '{}{}{}'.format(bn_prefix, out_layer, bn_postfix)
+    net[bn_name] = L.BatchNorm(net[conv_name], in_place=True, **bn_kwargs)
+    if use_scale:
+      sb_name = '{}{}{}'.format(scale_prefix, out_layer, scale_postfix)
+      net[sb_name] = L.Scale(net[bn_name], in_place=True, **sb_kwargs)
+    else:
+      bias_name = '{}{}{}'.format(bias_prefix, out_layer, bias_postfix)
+      net[bias_name] = L.Bias(net[bn_name], in_place=True, **bias_kwargs)
+  if use_relu:
+    relu_name = '{}_relu'.format(conv_name)
+    net[relu_name] = L.ReLU(net[conv_name], in_place=True)
+
+def DeBlurNetBody(net, from_layer, use_batchnorm=False,  freeze_layers=[]):
+    kwargs = {
+            'param': [dict(lr_mult=1, decay_mult=1), dict(lr_mult=2, decay_mult=0)],
+            'weight_filler': dict(type='xavier'),
+            'bias_filler': dict(type='constant', value=0)}
+
+    use_relu = False
+    # stage 1
+    out_layer = "flat_conv0" #to U3
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 64, 5, 2, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    # stage 2
+    from_layer = relu_name
+    out_layer = "down_conv1"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 64, 3, 1, 2)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    from_layer = relu_name
+    out_layer = "flat_conv1_1"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 128, 3, 1, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    from_layer = relu_name
+    out_layer = "flat_conv1_2"  # to U2
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 128, 3, 1, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    # stage 3
+    from_layer = relu_name
+    out_layer = "down_conv2"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 2)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    from_layer = relu_name
+    out_layer = "flat_conv2_1"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    from_layer = relu_name
+    out_layer = "flat_conv2_2"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    from_layer = relu_name
+    out_layer = "flat_conv2_3"  # to U1
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    # stage 3
+    from_layer = relu_name
+    out_layer = "down_conv3"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 512, 3, 1, 2)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    from_layer = relu_name
+    out_layer = "flat_conv3_1"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 512, 3, 1, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    from_layer = relu_name
+    out_layer = "flat_conv3_2"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 512, 3, 1, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    from_layer = relu_name
+    out_layer = "flat_conv3_3"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 512, 3, 1, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    # stage 4
+    from_layer = relu_name
+    out_layer = "up_conv1"
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 4, 1, 2)
+    eltwise_name = '{}_eltwise'.format("up1")
+    net[eltwise_name] = L.Eltwise(net[out_layer], net["flat_conv2_3"])
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    from_layer = relu_name
+    out_layer = "flat_conv4_1"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    from_layer = relu_name
+    out_layer = "flat_conv4_2"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    from_layer = relu_name
+    out_layer = "flat_conv4_3"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    # stage 5
+    from_layer = relu_name
+    out_layer = "up_conv2"
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 128, 4, 1, 2)
+    eltwise_name = '{}_eltwise'.format("up2")
+    net[eltwise_name] = L.Eltwise(net[out_layer], net["flat_conv1_2"])
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    from_layer = relu_name
+    out_layer = "flat_conv5_1"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 128, 3, 1, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    from_layer = relu_name
+    out_layer = "flat_conv5_2"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 64, 3, 1, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    # stage 6
+    from_layer = relu_name
+    out_layer = "up_conv3"
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 64, 4, 1, 2)
+    eltwise_name = '{}_eltwise'.format("up2")
+    net[eltwise_name] = L.Eltwise(net[out_layer], net["flat_conv0"])
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    from_layer = relu_name
+    out_layer = "flat_conv6_1"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 15, 3, 1, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    from_layer = relu_name
+    out_layer = "flat_conv6_2"
+    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 3, 3, 1, 1)
+    relu_name = '{}_relu'.format(out_layer)
+    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+
+    return net
