@@ -931,7 +931,7 @@ def DeconvBNLayer(net, from_layer, out_layer, use_bn, use_relu, num_output,
     # parameters for convolution layer with batchnorm.
     kwargs = {
         'param': [dict(lr_mult=1, decay_mult=1)],
-        'weight_filler': dict(type='gaussian', std=0.01),
+        'weight_filler': dict(type='xavier'),
         'bias_term': False,
         }
     # parameters for batchnorm layer.
@@ -992,76 +992,76 @@ def DeBlurNetBody(net, from_layer, use_batchnorm=False,  freeze_layers=[]):
     use_relu = False
     # stage 1
     out_layer = "flat_conv0" #to U3
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 64, 5, 2, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 64, 5, 2, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     # stage 2
     from_layer = relu_name
     out_layer = "down_conv1"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 64, 3, 1, 2)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 64, 3, 1, 2)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     from_layer = relu_name
     out_layer = "flat_conv1_1"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 128, 3, 1, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 128, 3, 1, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     from_layer = relu_name
     out_layer = "flat_conv1_2"  # to U2
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 128, 3, 1, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 128, 3, 1, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     # stage 3
     from_layer = relu_name
     out_layer = "down_conv2"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 2)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 2)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     from_layer = relu_name
     out_layer = "flat_conv2_1"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     from_layer = relu_name
     out_layer = "flat_conv2_2"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     from_layer = relu_name
     out_layer = "flat_conv2_3"  # to U1
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     # stage 3
     from_layer = relu_name
     out_layer = "down_conv3"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 512, 3, 1, 2)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 512, 3, 1, 2)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     from_layer = relu_name
     out_layer = "flat_conv3_1"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 512, 3, 1, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 512, 3, 1, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     from_layer = relu_name
     out_layer = "flat_conv3_2"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 512, 3, 1, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 512, 3, 1, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     from_layer = relu_name
     out_layer = "flat_conv3_3"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 512, 3, 1, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 512, 3, 1, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
@@ -1071,24 +1071,24 @@ def DeBlurNetBody(net, from_layer, use_batchnorm=False,  freeze_layers=[]):
     DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 4, 1, 2)
     eltwise_name = '{}_eltwise'.format("up1")
     net[eltwise_name] = L.Eltwise(net[out_layer], net["flat_conv2_3"])
-    relu_name = '{}_relu'.format(out_layer)
-    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+    relu_name = '{}_relu'.format(eltwise_name)
+    net[relu_name] = L.ReLU(net[eltwise_name], in_place=True)
 
     from_layer = relu_name
     out_layer = "flat_conv4_1"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     from_layer = relu_name
     out_layer = "flat_conv4_2"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     from_layer = relu_name
     out_layer = "flat_conv4_3"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 256, 3, 1, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
@@ -1098,18 +1098,18 @@ def DeBlurNetBody(net, from_layer, use_batchnorm=False,  freeze_layers=[]):
     DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 128, 4, 1, 2)
     eltwise_name = '{}_eltwise'.format("up2")
     net[eltwise_name] = L.Eltwise(net[out_layer], net["flat_conv1_2"])
-    relu_name = '{}_relu'.format(out_layer)
-    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+    relu_name = '{}_relu'.format(eltwise_name)
+    net[relu_name] = L.ReLU(net[eltwise_name], in_place=True)
 
     from_layer = relu_name
     out_layer = "flat_conv5_1"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 128, 3, 1, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 128, 3, 1, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     from_layer = relu_name
     out_layer = "flat_conv5_2"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 64, 3, 1, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 64, 3, 1, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
@@ -1117,20 +1117,20 @@ def DeBlurNetBody(net, from_layer, use_batchnorm=False,  freeze_layers=[]):
     from_layer = relu_name
     out_layer = "up_conv3"
     DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 64, 4, 1, 2)
-    eltwise_name = '{}_eltwise'.format("up2")
+    eltwise_name = '{}_eltwise'.format("up3")
     net[eltwise_name] = L.Eltwise(net[out_layer], net["flat_conv0"])
-    relu_name = '{}_relu'.format(out_layer)
-    net[relu_name] = L.ReLU(net[out_layer], in_place=True)
+    relu_name = '{}_relu'.format(eltwise_name)
+    net[relu_name] = L.ReLU(net[eltwise_name], in_place=True)
 
     from_layer = relu_name
     out_layer = "flat_conv6_1"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 15, 3, 1, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 15, 3, 1, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     from_layer = relu_name
     out_layer = "flat_conv6_2"
-    ConvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 3, 3, 1, 1)
+    DeconvBNLayer(net, from_layer, out_layer, use_batchnorm, use_relu, 3, 3, 1, 1)
     relu_name = '{}_relu'.format(out_layer)
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 

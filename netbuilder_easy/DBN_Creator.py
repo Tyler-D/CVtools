@@ -16,7 +16,7 @@ import sys
 ### Modify the following parameters accordingly ###
 # The directory which contains the caffe code.
 # We assume you are running the script at the CAFFE_ROOT.
-caffe_root = "/home/caffemaker/detection/caffe-ssd/"
+caffe_root = "/home/caffemaker/caffe/caffe-master/"
 
 # Set true if you want to start training right after generating all files.
 run_soon = False
@@ -27,22 +27,22 @@ resume_training = True
 remove_old_models = False
 
 train_data = "/home/caffemaker/caffe/dataset/blurred+sharp/train.txt"
-train_gt = "/home/caffemaker/caffe/dataset/blurred+shap/train_gt.txt"
+train_gt = "/home/caffemaker/caffe/dataset/blurred+shap/train_label.txt"
 test_data = "/home/caffemaker/caffe/dataset/blurred+sharp/val.txt"
-test_gt = "/home/caffemaker/caffe/dataset/blurred+sharp/val_gt.txt"
+test_gt = "/home/caffemaker/caffe/dataset/blurred+sharp/val_label.txt"
 pretrain_model = ""
 
 # Specify the batch sampler.
-resize_width = 160
-resize_height = 160
+resize_width = 128
+resize_height = 128
 resize = "{}x{}".format(resize_width, resize_height)
 train_transform_param = {
-        'mean_value': [127.5, 127.5, 127.5],
-        'scale': 0.0078125,
-        'mirror': True}
+        'scale': 0.00390625,
+        'crop_size': 128,
+        }
 test_transform_param = {
-        'mean_value': [127.5, 127.5, 127.5],
-        'scale': 0.0078125}
+        'crop_size': 128,
+        'scale': 0.00390625}
 
 # If true, use batch norm for all newly added layers.
 # Currently only the non batch norm version has been tested.
@@ -62,11 +62,10 @@ model_name = "DBN_{}".format(job_name)
 # Directory which stores the model .prototxt file.
 save_dir = "/home/caffemaker/caffe/models/DBN/{}".format(job_name)
 # Directory which stores the snapshot of models.
-snapshot_dir = "/home/caffemaker/caffe/jobs/Zface/{}".format(job_name)
+snapshot_dir = "/home/caffemaker/caffe/jobs/{}".format(job_name)
 # Directory which stores the job script and log file.
-job_dir = "/home/caffemaker/caffe/jobs/Zface/{}".format(job_name)
+job_dir = "/home/caffemaker/caffe/jobs/{}".format(job_name)
 # Directory which stores the detection results.
-output_result_dir = "{}/caffemaker/caffe/jobs/Zface/{}/Main".format(os.environ['HOME'], job_name)
 
 # model definition files.
 train_net_file = "{}/train.prototxt".format(save_dir)
@@ -115,7 +114,7 @@ solver_param = {
     'snapshot': 1000,
     'display': 10,
     'average_loss': 10,
-    'type': "SGD",
+    'type': "Adam",
     'solver_mode': solver_mode,
     'device_id': device_id,
     'debug_info': False,
@@ -136,9 +135,9 @@ make_if_not_exist(snapshot_dir)
 net = caffe.NetSpec()
 
 net.data = L.ImageData(source="/home/caffemaker/caffe/dataset/blurred+sharp/train.txt",
-                       batch_size=16, transform_param = train_transform_param)
-net.label = L.ImageData(source="/home/caffemaker/caffe/dataset/blurred+sharp/train_gt.txt",
-                        batch_size=16, transform_param = train_transform_param)
+                       batch_size=32, transform_param = train_transform_param, new_height=224, new_width=224)
+net.label = L.ImageData(source="/home/caffemaker/caffe/dataset/blurred+sharp/train_label.txt",
+                        batch_size=32, transform_param = train_transform_param, new_height=224, new_width=224)
 DeBlurNetBody(net, from_layer='data', use_batchnorm=True)
 net.loss = L.EuclideanLoss(net["flat_conv6_2"], net.label)
 
@@ -152,9 +151,9 @@ with open(train_net_file, 'w') as f:
 net = caffe.NetSpec()
 
 net.data = L.ImageData(source="/home/caffemaker/caffe/dataset/blurred+sharp/val.txt",
-                        batch_size=1, transform_param = test_transform_param)
-net.label = L.ImageData(source="/home/caffemaker/caffe/dataset/blurred+sharp/val_gt.txt",
-                        batch_size=1, transform_param = test_transform_param)
+                        batch_size=1, transform_param = test_transform_param, new_height=224, new_width=224)
+net.label = L.ImageData(source="/home/caffemaker/caffe/dataset/blurred+sharp/val_label.txt",
+                        batch_size=1, transform_param = test_transform_param, new_height=224, new_width=224)
 
 DeBlurNetBody(net, from_layer='data', use_batchnorm=True)
 
