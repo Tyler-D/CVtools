@@ -15,3 +15,7 @@ Create Dataset for simple classify task.
 draw rectangle on images.
 ## 8 netbulder_easy:
 create network prototxt for caffe.
+## 9 motion_blur.py:
+create motion blur on images.
+## 10 class_aware_balance.py:
+balance the training samples
