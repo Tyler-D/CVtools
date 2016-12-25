@@ -18,10 +18,17 @@ def classAwareBalance(root_path, file_list_path):
     '''
 
     cls_dict = {}
-    for cls in os.listdir(root_path):
+    cls_label = {}
+    label_file = open(os.path.join(file_list_path, "label.txt"),"w")
+    for idx, cls in enumerate(os.listdir(root_path)):
         cls_dict[cls] = len(os.listdir(os.path.join(root_path, cls)))
+        cls_label[cls] = idx
+        label_file.write(cls + " " + str(idx)+"\n")
 
-    max_sample_num = cls_dict[max(cls_dict)]
+
+    print cls_dict
+    max_sample_num = max(cls_dict.values())
+    print max_sample_num
 
     cls_sample_list = {}
     for cls in cls_dict:
@@ -32,7 +39,7 @@ def classAwareBalance(root_path, file_list_path):
         ord_file_list = os.listdir(os.path.join(root_path, cls))
         single_cls_list = []
         for idx in cls_sample_list[cls]:
-            single_cls_list.append(os.path.join(root_path, cls, ord_file_list[idx % cls_dict[cls]]))
+            single_cls_list.append(os.path.join(root_path, cls, ord_file_list[idx % cls_dict[cls]])+" "+ str(cls_label[cls]))
         final_list += single_cls_list
 
     random.shuffle(final_list)
@@ -40,5 +47,6 @@ def classAwareBalance(root_path, file_list_path):
     for file in final_list:
         target_file.write(file+"\n")
 
-classAwareBalance("/home/caffemaker/kaggle/data/train/", "./")
+
+# classAwareBalance("/home/caffemaker/kaggle/data/train_crop/", "./")
 
