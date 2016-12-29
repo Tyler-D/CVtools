@@ -1135,3 +1135,7 @@ def DeBlurNetBody(net, from_layer, use_batchnorm=False,  freeze_layers=[]):
     net[relu_name] = L.ReLU(net[out_layer], in_place=True)
 
     return net
+
+def FishHeadNetBody(net, from_layer, use_batchnorm=False):
+    use_relu = True
+    out_layer = "conv1a"

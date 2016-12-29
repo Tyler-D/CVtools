@@ -27,6 +27,7 @@ def classAwareBalance(root_path, file_list_path):
 
 
     print cls_dict
+    print cls_label
     max_sample_num = max(cls_dict.values())
     print max_sample_num
 
@@ -48,5 +49,5 @@ def classAwareBalance(root_path, file_list_path):
         target_file.write(file+"\n")
 
 
-# classAwareBalance("/home/caffemaker/kaggle/data/train_crop/", "./")
+classAwareBalance("/home/caffemaker/kaggle/data/train_crop/", "./")
 
