@@ -238,7 +238,7 @@ min_sizes = [min_dim * 10 / 100.] + min_sizes
 max_sizes = [[]] + max_sizes
 aspect_ratios = [[], [], [], []]
 # L2 normalize conv4_3.
-normalizations = [-1, -1, -1, -1]
+normalizations = [20, -1, -1, -1]
 # variance used to encode/decode prior bboxes.
 if code_type == P.PriorBox.CENTER_SIZE:
   prior_variance = [0.1, 0.1, 0.2, 0.2]

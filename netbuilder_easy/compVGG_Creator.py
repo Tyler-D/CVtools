@@ -1,6 +1,7 @@
 from __future__ import print_function
 import caffe
 from common_module_libs import *
+from compressed_net import CompVGG16
 from model_libs import *
 from google.protobuf import text_format
 
@@ -160,9 +161,9 @@ else:
     base_lr = 0.0005
 
 # Modify the job name if you want.
-job_name = "ZNet-NoBPReLU_SSD_{}".format(resize)
+job_name = "ZNet-compVGG_SSD_{}".format(resize)
 # The name of the model. Modify it if you want.
-model_name = "ZNet-NoBPReLU_SSD_{}".format(job_name)
+model_name = "ZNet-compVGG_SSD_{}".format(job_name)
 
 # Directory which stores the model .prototxt file.
 save_dir = "/home/caffemaker/Z-Net/models/ZNet/{}".format(job_name)
@@ -186,7 +187,7 @@ job_file = "{}/{}.sh".format(job_dir, model_name)
 # Stores the test image names and sizes. Created by data/VOC0712/create_list.sh
 name_size_file = "/home/caffemaker/caffe/dataset/pic_video+flickr/test_name_size.txt"
 # The pretrained model. We use the Fully convolutional reduced (atrous) VGGNet.
-pretrain_model = "/home/caffemaker/Z-Net/Model_Test/res-10/resnet10_cvgj_iter_320000.caffemodel"
+pretrain_model = "/home/caffemaker/caffe/models/Zface/Zfacev0.3/Zfacev0.3_500x500_iter_58500.caffemodel"
 # Stores LabelMapItem.
 label_map_file = "/home/caffemaker/caffe/dataset/wider+aflw/labelmap.prototxt"
 
@@ -224,7 +225,7 @@ loss_param = {
 # parameters for generating priors.
 # minimum dimension of input image
 min_dim = 500
-mbox_source_layers = ['layer_128_1_prelu1', 'layer_256_1_prelu1', 'layer_512_1_prelu1', 'last_prelu']
+mbox_source_layers = ['eltwise_stage3', 'conv4_3', 'fc7', 'conv6_2']
 # in percent %
 min_ratio = 2
 max_ratio = 30
@@ -238,7 +239,7 @@ min_sizes = [min_dim * 10 / 100.] + min_sizes
 max_sizes = [[]] + max_sizes
 aspect_ratios = [[], [], [], []]
 # L2 normalize conv4_3.
-normalizations = [-1, -1, -1, -1]
+normalizations = [20, 20, -1, -1]
 # variance used to encode/decode prior bboxes.
 if code_type == P.PriorBox.CENTER_SIZE:
   prior_variance = [0.1, 0.1, 0.2, 0.2]
@@ -355,8 +356,8 @@ net.data, net.label = CreateAnnotatedDataLayer(train_data, batch_size=batch_size
         train=True, output_label=True, label_map_file=label_map_file,
         transform_param=train_transform_param, batch_sampler=batch_sampler)
 
-ResNet10Body(net, from_layer='data', use_prelu=True)
 # ResNet10Body(net, from_layer='data')
+compVGG16(net, 'data')
 
 mbox_layers = CreateMultiBoxHead(net, data_layer='data', from_layers=mbox_source_layers,
         use_batchnorm=use_batchnorm, min_sizes=min_sizes, max_sizes=max_sizes,
@@ -380,7 +381,7 @@ net.data, net.label = CreateAnnotatedDataLayer(test_data, batch_size=test_batch_
         train=False, output_label=True, label_map_file=label_map_file,
         transform_param=test_transform_param)
 
-ResNet10Body(net, from_layer='data', use_prelu=True)
+compVGG16(net, 'data')
 # ResNet10Body(net, from_layer='data')
 
 mbox_layers = CreateMultiBoxHead(net, data_layer='data', from_layers=mbox_source_layers,

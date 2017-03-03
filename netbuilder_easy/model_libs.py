@@ -977,7 +977,7 @@ def ZNetBody(net, from_layer, dropout=True, freeze_layers=[]):
             'weight_filler': dict(type='xavier'),
             'bias_filler': dict(type='constant', value=0)}
 
-def ResNet10Body(net, from_layer):
+def ResNet10Body(net, from_layer, user_prelu=False):
     bn_kwargs = {'param': [dict(lr_mult=0.0), dict(lr_mult=0.0), dict(lr_mult=0.0)]}
     scale_kwargs = {'param': [dict(lr_mult=1.0, decay_mult=1.0), dict(lr_mult=2.0, decay_mult=1.0)],
                     'scale_param': dict(bias_term=True)
@@ -996,8 +996,13 @@ def ResNet10Body(net, from_layer):
                               stride=2, **conv_kwargs)
     net.conv1_bn_new = L.BatchNorm(net['conv1'], in_place=True, **bn_kwargs)
     net.conv1_scale_new = L.Scale(net['conv1_bn_new'], in_place=True, **scale_kwargs)
-    net.conv1_relu = L.ReLU(net['conv1_scale_new'], in_place=True)
-    net.conv1_pool = L.Pooling(net['conv1_relu'], kernel_size=3, stride=2)
+    if (use_prelu):
+        relu_name = "{}_prelu".format('conv1')
+        net[relu_name] = L.PReLU(net['conv1_scale_new'], in_place=True)
+    else :
+        relu_name = "{}_relu".format('conv1')
+        net[relu_name] = L.ReLU(net['conv1_scale_new'], in_place=True)
+    net.conv1_pool = L.Pooling(net[relu_name], kernel_size=3, stride=2)
     from_layer = 'conv1_pool'
 
     # layer_64_1_conv1
@@ -1009,8 +1014,13 @@ def ResNet10Body(net, from_layer):
                                          stride=1, **conv_kwargs)
     net.layer_64_1_bn2_new = L.BatchNorm(net['layer_64_1_conv1'], in_place=True, **bn_kwargs)
     net.layer_64_1_scale2_new = L.Scale(net['layer_64_1_bn2_new'], in_place=True, **scale_kwargs)
-    net.layer_64_1_relu2 = L.ReLU(net['layer_64_1_scale2_new'], in_place=True)
-    from_layer = 'layer_64_1_relu2'
+    if (use_prelu):
+        relu_name = "{}_prelu2".format('layer_64_1')
+        net[relu_name] = L.PReLU(net['layer_64_1_scale2_new'], in_place=True)
+    else :
+        relu_name = "{}_relu2".format('layer_64_1')
+        net[relu_name] = L.ReLU(net['layer_64_1_scale2_new'], in_place=True)
+    from_layer = relu_name
 
     # layer_64_1_conv2
     net.layer_64_1_conv2 = L.Convolution(net[from_layer], in_place=True, num_output=64, pad=1, kernel_size=3,
@@ -1021,16 +1031,26 @@ def ResNet10Body(net, from_layer):
     # layer_128_1_bn1
     net.layer_128_1_bn1_new = L.BatchNorm(net[from_layer], **bn_kwargs)
     net.layer_128_1_scale1_new = L.Scale(net['layer_128_1_bn1_new'], in_place=True, **scale_kwargs)
-    net.layer_128_1_relu1 = L.ReLU(net['layer_128_1_scale1_new'], in_place=True)
-    from_layer = 'layer_128_1_relu1'
+    if (use_prelu):
+        relu_name = "{}_prelu1".format('layer_128_1')
+        net[relu_name] = L.PReLU(net['layer_128_1_scale1_new'], in_place=True)
+    else :
+        relu_name = "{}_relu1".format('layer_128_1')
+        net[relu_name] = L.ReLU(net['layer_128_1_scale1_new'], in_place=True)
+    from_layer = relu_name
 
     # layer_128_1_conv1
     net.layer_128_1_conv1 = L.Convolution(net[from_layer], num_output=128, pad=1, kernel_size=3,
                                           stride=2, **conv_kwargs)
     net.layer_128_1_bn2_new = L.BatchNorm(net['layer_128_1_conv1'], in_place=True, **bn_kwargs)
     net.layer_128_1_scale2_new = L.Scale(net['layer_128_1_bn2_new'], in_place=True, **scale_kwargs)
-    net.layer_128_1_relu2 = L.ReLU(net['layer_128_1_scale2_new'], in_place=True)
-    from_layer = 'layer_128_1_relu2'
+    if (use_prelu):
+        relu_name = "{}_prelu2".format('layer_128_1')
+        net[relu_name] = L.PReLU(net['layer_128_1_scale2_new'], in_place=True)
+    else :
+        relu_name = "{}_relu2".format('layer_128_1')
+        net[relu_name] = L.ReLU(net['layer_128_1_scale2_new'], in_place=True)
+    from_layer = relu_name
 
     # layer_128_1_conv2
     net.layer_128_1_conv2 = L.Convolution(net[from_layer], num_output=128, pad=1, kernel_size=3,
@@ -1045,17 +1065,29 @@ def ResNet10Body(net, from_layer):
     # layer_256_1_bn
     net.layer_256_1_bn1_new = L.BatchNorm(net['layer_128_1_sum'], **bn_kwargs)
     net.layer_256_1_scale1_new = L.Scale(net['layer_256_1_bn1_new'], in_place=True, **scale_kwargs)
-    net.layer_256_1_relu1 = L.ReLU(net['layer_256_1_scale1_new'], in_place=True)
+    if (use_prelu):
+        relu_name = "{}_prelu1".format('layer_256_1')
+        net[relu_name] = L.PReLU(net['layer_256_1_scale1_new'], in_place=True)
+    else :
+        relu_name = "{}_relu1".format('layer_256_1')
+        net[relu_name] = L.ReLU(net['layer_256_1_scale1_new'], in_place=True)
+    from_layer = relu_name
 
     # layer_256_1_conv1
-    net.layer_256_1_conv1 = L.Convolution(net['layer_256_1_relu1'], num_output=256, pad=1, kernel_size=3,
+    net.layer_256_1_conv1 = L.Convolution(net[from_layer], num_output=256, pad=1, kernel_size=3,
                                           stride=2, **conv_kwargs)
     net.layer_256_1_bn2_new = L.BatchNorm(net['layer_256_1_conv1'], in_place=True, **bn_kwargs)
     net.layer_256_1_scale2_new = L.Scale(net['layer_256_1_bn2_new'], in_place=True, **scale_kwargs)
-    net.layer_256_1_relu2 = L.ReLU(net['layer_256_1_scale2_new'], in_place=True)
+    if (use_prelu):
+        relu_name = "{}_prelu2".format('layer_256_1')
+        net[relu_name] = L.PReLU(net['layer_256_1_scale2_new'], in_place=True)
+    else :
+        relu_name = "{}_relu2".format('layer_256_1')
+        net[relu_name] = L.ReLU(net['layer_256_1_scale2_new'], in_place=True)
+    from_layer = relu_name
 
     # sum
-    net.layer_256_1_conv2 = L.Convolution(net['layer_256_1_relu2'], num_output=256, pad=1, kernel_size=3,
+    net.layer_256_1_conv2 = L.Convolution(net[from_layer], num_output=256, pad=1, kernel_size=3,
                                           stride=1, **conv_kwargs)
     net.layer_256_1_conv_expand = L.Convolution(net['layer_256_1_relu1'], num_output=256, pad=0, kernel_size=1,
                                                 stride=2, **conv_kwargs)
@@ -1064,17 +1096,29 @@ def ResNet10Body(net, from_layer):
     # layer_512_1_bn1
     net.layer_512_1_bn1_new = L.BatchNorm(net['layer_256_1_sum'], **bn_kwargs)
     net.layer_512_1_scale1_new = L.Scale(net['layer_512_1_bn1_new'], in_place=True, **scale_kwargs)
-    net.layer_512_1_relu1 = L.ReLU(net['layer_512_1_scale1_new'], in_place=True)
+    if (use_prelu):
+        relu_name = "{}_prelu1".format('layer_512_1')
+        net[relu_name] = L.PReLU(net['layer_512_1_scale1_new'], in_place=True)
+    else :
+        relu_name = "{}_relu1".format('layer_512_1')
+        net[relu_name] = L.ReLU(net['layer_512_1_scale1_new'], in_place=True)
+    from_layer = relu_name
 
     # layer_512_1_conv1
-    net.layer_512_1_conv1 = L.Convolution(net['layer_512_1_relu1'], num_output=512, pad=1, kernel_size=3,
+    net.layer_512_1_conv1 = L.Convolution(net[from_layer], num_output=512, pad=1, kernel_size=3,
                                           stride=2, **conv_kwargs)
     net.layer_512_1_bn2_new = L.BatchNorm(net['layer_512_1_conv1'], in_place=True, **bn_kwargs)
     net.layer_512_1_scale2_new = L.Scale(net['layer_512_1_bn2_new'], in_place=True, **scale_kwargs)
-    net.layer_512_1_relu2 = L.ReLU(net['layer_512_1_scale2_new'], in_place=True)
+    if (use_prelu):
+        relu_name = "{}_prelu2".format('layer_512_1')
+        net[relu_name] = L.PReLU(net['layer_512_1_scale2_new'], in_place=True)
+    else :
+        relu_name = "{}_relu2".format('layer_512_1')
+        net[relu_name] = L.ReLU(net['layer_512_1_scale2_new'], in_place=True)
+    from_layer = relu_name
 
     # sum
-    net.layer_512_1_conv2 = L.Convolution(net['layer_512_1_relu2'], num_output=512, pad=1, kernel_size=3,
+    net.layer_512_1_conv2 = L.Convolution(net[from_layer], num_output=512, pad=1, kernel_size=3,
                                           stride=1, **conv_kwargs)
     net.layer_512_1_conv_expand = L.Convolution(net['layer_512_1_relu1'], num_output=512, pad=0, kernel_size=1,
                                                 stride=2, **conv_kwargs)
@@ -1083,7 +1127,12 @@ def ResNet10Body(net, from_layer):
     # last_bn
     net.last_bn_new = L.BatchNorm(net['layer_512_1_sum'], in_place=True, **bn_kwargs)
     net.last_scale_new = L.Scale(net['last_bn_new'], in_place=True, **scale_kwargs)
-    net.last_relu = L.ReLU(net['last_scale_new'], in_place=True)
+    if (use_prelu):
+        relu_name = "{}_prelu".format('last')
+        net[relu_name] = L.PReLU(net['last_scale_new'], in_place=True)
+    else :
+        relu_name = "{}_relu".format('last')
+        net[relu_name] = L.ReLU(net['last_scale_new'], in_place=True)
 
     # global_pooling
     # net.global_pool = L.Pooling(net['last_relu'], pool=P.Pooling.AVE, global_pooling=True)
