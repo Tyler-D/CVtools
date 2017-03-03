@@ -1,4 +1,5 @@
 from __future__ import print_function
+from common_module_libs import *
 import caffe
 from model_libs import *
 from google.protobuf import text_format
