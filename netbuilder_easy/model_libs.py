@@ -977,7 +977,7 @@ def ZNetBody(net, from_layer, dropout=True, freeze_layers=[]):
             'weight_filler': dict(type='xavier'),
             'bias_filler': dict(type='constant', value=0)}
 
-def ResNet10Body(net, from_layer, user_prelu=False):
+def ResNet10Body(net, from_layer, use_prelu=False):
     bn_kwargs = {'param': [dict(lr_mult=0.0), dict(lr_mult=0.0), dict(lr_mult=0.0)]}
     scale_kwargs = {'param': [dict(lr_mult=1.0, decay_mult=1.0), dict(lr_mult=2.0, decay_mult=1.0)],
                     'scale_param': dict(bias_term=True)
