@@ -1,7 +1,7 @@
 from __future__ import print_function
 import caffe
 from common_module_libs import *
-from compressed_net import CompVGG16
+from compresed_net import compVGG16
 from model_libs import *
 from google.protobuf import text_format
 
@@ -225,7 +225,7 @@ loss_param = {
 # parameters for generating priors.
 # minimum dimension of input image
 min_dim = 500
-mbox_source_layers = ['eltwise_stage3', 'conv4_3', 'fc7', 'conv6_2']
+mbox_source_layers = ['eltwise_stage3', 'conv4_3', 'fc7']
 # in percent %
 min_ratio = 2
 max_ratio = 30
@@ -237,9 +237,9 @@ for ratio in xrange(min_ratio, max_ratio + 1, step):
   max_sizes.append(min_dim * (ratio + step) / 100.)
 min_sizes = [min_dim * 10 / 100.] + min_sizes
 max_sizes = [[]] + max_sizes
-aspect_ratios = [[], [], [], []]
+aspect_ratios = [[], [], []]
 # L2 normalize conv4_3.
-normalizations = [20, 20, -1, -1]
+normalizations = [20, 20, -1]
 # variance used to encode/decode prior bboxes.
 if code_type == P.PriorBox.CENTER_SIZE:
   prior_variance = [0.1, 0.1, 0.2, 0.2]

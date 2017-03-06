@@ -9,7 +9,7 @@ from caffe import layers as L
 from caffe import params as P
 from caffe.proto import caffe_pb2
 
-def CompVGG16(net, from_layer):
+def compVGG16(net, from_layer):
     '''
      Compressed VGG16 Network Using the method in "DeepRebirth"
      reconstruct the conv-pooling stacks to strided conv
