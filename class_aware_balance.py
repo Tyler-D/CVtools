@@ -31,6 +31,7 @@ def classAwareBalance(root_path, file_list_path, max_sample_num=0):
     if max_sample_num == 0:
         max_sample_num = max(cls_dict.values())
     print max_sample_num
+    max_sample_num = 300
 
     cls_sample_list = {}
     for cls in cls_dict:

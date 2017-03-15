@@ -1,9 +1,9 @@
 from __future__ import print_function
 import caffe
 from common_module_libs import *
-from compresed_net import compVGG16
 from model_libs import *
 from google.protobuf import text_format
+from compresed_net import *
 
 import math
 import os
@@ -27,9 +27,9 @@ resume_training = True
 remove_old_models = False
 
 # The database file for training data. Created by data/VOC0712/create_data.sh
-train_data = "/home/caffemaker/caffe/dataset/wider_clean/lmdb/wider_clean_train_lmdb"
+train_data = "/home/caffemaker/caffe/dataset/pic_video+flickr/lmdb_sf/vf_shuffle_train_lmdb"
 # The database file for testing data. Created by data/VOC0712/create_data.sh
-test_data = "/home/caffemaker/caffe/dataset/wider_clean/lmdb/wider_clean_val_lmdb"
+test_data = "/home/caffemaker/caffe/dataset/pic_video+flickr/lmdb_sf/vf_shuffle_val_lmdb"
 # Specify the batch sampler.
 resize_width = 500
 resize_height = 500
@@ -122,8 +122,8 @@ batch_sampler = [
         ]
 
 train_transform_param = {
-        'mirror': True,
         'mean_value': [104, 117, 123],
+        'mirror': True,
         'resize_param': {
                 'prob': 1,
                 'resize_mode': P.Resize.WARP,
@@ -163,18 +163,18 @@ else:
     base_lr = 0.0005
 
 # Modify the job name if you want.
-job_name = "ZNet-compVGG_SSD_{}".format(resize)
+job_name = "JRes22_SSD_{}".format(resize)
 # The name of the model. Modify it if you want.
-model_name = "ZNet-compVGG_SSD_{}".format(job_name)
+model_name = "JRes22_SSD_{}".format(job_name)
 
 # Directory which stores the model .prototxt file.
-save_dir = "/home/caffemaker/Z-Net/models/ZNet/{}".format(job_name)
+save_dir = "/home/caffemaker/Z-Net/models/{}".format(job_name)
 # Directory which stores the snapshot of models.
-snapshot_dir = "/home/caffemaker/Z-Net/jobs/ZNet/{}".format(job_name)
+snapshot_dir = "/home/caffemaker/Z-Net/jobs/{}".format(job_name)
 # Directory which stores the job script and log file.
-job_dir = "/home/caffemaker/Z-Net/jobs/ZNet/{}".format(job_name)
+job_dir = "/home/caffemaker/Z-Net/jobs/{}".format(job_name)
 # Directory which stores the detection results.
-output_result_dir = "{}/caffemaker/Z-Net/jobs/ZNet/{}/Main".format(os.environ['HOME'], job_name)
+output_result_dir = "{}/caffemaker/Z-Net/jobs/{}/Main".format(os.environ['HOME'], job_name)
 
 # model definition files.
 train_net_file = "{}/train.prototxt".format(save_dir)
@@ -187,11 +187,11 @@ snapshot_prefix = "{}/{}".format(snapshot_dir, model_name)
 job_file = "{}/{}.sh".format(job_dir, model_name)
 
 # Stores the test image names and sizes. Created by data/VOC0712/create_list.sh
-name_size_file = "/home/caffemaker/caffe/dataset/wider_clean/test_name_size.txt"
+name_size_file = "/home/caffemaker/caffe/dataset/pic_video+flickr/test_name_size.txt"
 # The pretrained model. We use the Fully convolutional reduced (atrous) VGGNet.
-pretrain_model = "/home/caffemaker/caffe/models/Zface/Zfacev0.3/Zfacev0.3_500x500_iter_58500.caffemodel"
+pretrain_model = "/home/caffemaker/Z-Net/Model_Test/J-res22/face_feature_iter.caffemodel"
 # Stores LabelMapItem.
-label_map_file = "/home/caffemaker/caffe/dataset/wider_clean/labelmap.prototxt"
+label_map_file = "/home/caffemaker/caffe/dataset/pic_video+flickr/labelmap.prototxt"
 
 # MultiBoxLoss parameters.
 num_classes = 2
@@ -202,7 +202,7 @@ normalization_mode = P.Loss.VALID
 code_type = P.PriorBox.CENTER_SIZE
 ignore_cross_boundary_bbox = False
 mining_type = P.MultiBoxLoss.MAX_NEGATIVE
-neg_pos_ratio = 2.
+neg_pos_ratio = 3.
 loc_weight = (neg_pos_ratio + 1.) / 4.
 multibox_loss_param = {
     'loc_loss_type': P.MultiBoxLoss.SMOOTH_L1,
@@ -227,10 +227,10 @@ loss_param = {
 # parameters for generating priors.
 # minimum dimension of input image
 min_dim = 500
-mbox_source_layers = ['eltwise_stage3_new', 'conv4_3_new', 'fc7']
+mbox_source_layers = ['conv3', 'conv4', 'conv5', 'pool5']
 # in percent %
-min_ratio = 2
-max_ratio = 30
+min_ratio = 5
+max_ratio = 45
 step = int(math.floor((max_ratio - min_ratio) / (len(mbox_source_layers) - 2)))
 min_sizes = []
 max_sizes = []
@@ -239,9 +239,9 @@ for ratio in xrange(min_ratio, max_ratio + 1, step):
   max_sizes.append(min_dim * (ratio + step) / 100.)
 min_sizes = [min_dim * 10 / 100.] + min_sizes
 max_sizes = [[]] + max_sizes
-aspect_ratios = [[], [], []]
+aspect_ratios = [[], [], [], []]
 # L2 normalize conv4_3.
-normalizations = [20, 20, -1]
+normalizations = [10, -1, -1, -1]
 # variance used to encode/decode prior bboxes.
 if code_type == P.PriorBox.CENTER_SIZE:
   prior_variance = [0.1, 0.1, 0.2, 0.2]
@@ -257,8 +257,8 @@ gpulist = gpus.split(",")
 num_gpus = len(gpulist)
 
 # Divide the mini-batch to different GPUs.
-batch_size = 16
-accum_batch_size = 16
+batch_size = 8
+accum_batch_size = 8
 iter_size = accum_batch_size / batch_size
 solver_mode = P.Solver.CPU
 device_id = 0
@@ -284,7 +284,7 @@ elif normalization_mode == P.Loss.FULL:
 # freeze_layers = ['conv1_1', 'conv1_2', 'conv2_1', 'conv2_2']
 
 # Evaluate on whole test set.
-num_test_image = 3224
+num_test_image = 1800
 test_batch_size = 1
 test_iter = num_test_image / test_batch_size
 
@@ -358,8 +358,8 @@ net.data, net.label = CreateAnnotatedDataLayer(train_data, batch_size=batch_size
         train=True, output_label=True, label_map_file=label_map_file,
         transform_param=train_transform_param, batch_sampler=batch_sampler)
 
+compJRes22(net, from_layer='data')
 # ResNet10Body(net, from_layer='data')
-compVGG16(net, 'data')
 
 mbox_layers = CreateMultiBoxHead(net, data_layer='data', from_layers=mbox_source_layers,
         use_batchnorm=use_batchnorm, min_sizes=min_sizes, max_sizes=max_sizes,
@@ -383,7 +383,7 @@ net.data, net.label = CreateAnnotatedDataLayer(test_data, batch_size=test_batch_
         train=False, output_label=True, label_map_file=label_map_file,
         transform_param=test_transform_param)
 
-compVGG16(net, 'data')
+compJRes22(net, from_layer='data')
 # ResNet10Body(net, from_layer='data')
 
 mbox_layers = CreateMultiBoxHead(net, data_layer='data', from_layers=mbox_source_layers,
