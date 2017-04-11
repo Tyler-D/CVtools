@@ -416,3 +416,13 @@ def DeconvBNLayer(net, from_layer, out_layer, use_bn, use_relu, num_output,
   if use_relu:
     relu_name = '{}_relu'.format(conv_name)
     net[relu_name] = L.ReLU(net[conv_name], in_place=True)
+
+def nFoldCrossValidation(net, orig_data_set):
+    '''
+    create n net prototxt for n-fold cross validation
+    ------
+    Param:
+    net: convolution network structure. NetSpec;
+    orig_data_set: image file list. txt;
+    '''
+

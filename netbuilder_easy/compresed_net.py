@@ -72,11 +72,17 @@ def compVGG16(net, from_layer):
     net.relu6 = L.ReLU(net.fc6, in_place=True)
     net.fc7 = L.Convolution(net.relu6, num_output=1024, kernel_size=1, **norm_kwargs)
 
-def JRes22Block(net, from_layer, stage_id, num_output):
-    kwargs = {
-              'param': [dict(lr_mult=1, decay_mult=1), dict(lr_mult=2, decay_mult=0)],
-              'weight_filler': dict(type='xavier'),
-              'bias_filler': dict(type='constant', value=0)}
+def JRes22Block(net, from_layer, stage_id, num_output, freeze=False):
+    if freeze:
+        kwargs = {
+                'param': [dict(lr_mult=0, decay_mult=0), dict(lr_mult=0, decay_mult=0)],
+                'weight_filler': dict(type='msra'),
+                'bias_filler': dict(type='constant', value=0)}
+    else :
+        kwargs = {
+                'param': [dict(lr_mult=1, decay_mult=1), dict(lr_mult=2, decay_mult=0)],
+                'weight_filler': dict(type='xavier'),
+                'bias_filler': dict(type='constant', value=0)}
 # block_a
     skip_layer = from_layer
     conv_name = 'conv{}a_1'.format(stage_id)
@@ -171,3 +177,119 @@ def compJRes22(net, from_layer):
     net[conv_name] = L.Convolution(net[from_layer], num_output=128, pad=1, kernel_size=3, stride=1, **kwargs)
     net[relu_name] = L.PReLU(net[conv_name], in_place=True)
     net.pool5 = L.Pooling(net[relu_name], pool=P.Pooling.MAX, kernel_size=2, stride=2)
+
+def compJRes24(net, from_layer):
+    kwargs = {
+              'param': [dict(lr_mult=1, decay_mult=1), dict(lr_mult=2, decay_mult=0)],
+              'weight_filler': dict(type='xavier'),
+              'bias_filler': dict(type='constant', value=0)}
+    freeze_kwargs = {
+                   'param': [dict(lr_mult=0, decay_mult=0), dict(lr_mult=0, decay_mult=0)],
+                   'weight_filler': dict(type='msra'),
+                   'bias_filler': dict(type='constant', value=0)}
+    #stage1:
+    conv_name = 'conv1a'
+    relu_name = 'relu1a'
+    net[conv_name] = L.Convolution(net[from_layer], num_output=32, pad=1, kernel_size=3, stride=1, **kwargs)
+    net[relu_name] = L.PReLU(net[conv_name], in_place=True)
+    from_layer = relu_name
+    conv_name = 'conv1'
+    relu_name = 'relu1'
+    net[conv_name] = L.Convolution(net[from_layer], num_output=48, pad=1, kernel_size=3, stride=1, **kwargs)
+    net[relu_name] = L.PReLU(net[conv_name], in_place=True)
+    net.pool1 = L.Pooling(net[relu_name], pool=P.Pooling.MAX, kernel_size=2, stride=2)
+
+    #stage2:
+    from_layer='pool1'
+    stage_id = 2
+    output = JRes22Block(net, from_layer, stage_id, num_output=48)
+    from_layer=output
+    conv_name = 'conv2'
+    relu_name = 'relu2'
+    net[conv_name] = L.Convolution(net[from_layer], num_output=96, pad=1, kernel_size=3, stride=1, **kwargs)
+    net[relu_name] = L.PReLU(net[conv_name], in_place=True)
+    net.pool2 = L.Pooling(net[relu_name], pool=P.Pooling.MAX, kernel_size=2, stride=2)
+
+#stage3:
+    from_layer='pool2'
+    stage_id = 3
+    output = JRes22Block(net, from_layer, stage_id, num_output=96)
+    from_layer=output
+    conv_name = 'conv3'
+    relu_name = 'relu3'
+    net[conv_name] = L.Convolution(net[from_layer], num_output=192, pad=1, kernel_size=3, stride=1, **kwargs)
+    net[relu_name] = L.PReLU(net[conv_name], in_place=True)
+    net.pool3 = L.Pooling(net[relu_name], pool=P.Pooling.MAX, kernel_size=2, stride=2)
+
+#stage4:
+    from_layer='pool3'
+    stage_id = 4
+    output = JRes22Block(net, from_layer, stage_id, num_output=192)
+    from_layer=output
+    conv_name = 'conv4'
+    relu_name = 'relu4'
+    net[conv_name] = L.Convolution(net[from_layer], num_output=128, pad=1, kernel_size=3, stride=1, **kwargs)
+    net[relu_name] = L.PReLU(net[conv_name], in_place=True)
+    net.pool4 = L.Pooling(net[relu_name], pool=P.Pooling.MAX, kernel_size=2, stride=2)
+
+#stage5:
+    from_layer='pool4'
+    stage_id = 5
+    output = JRes22Block(net, from_layer, stage_id, num_output=128)
+    from_layer=output
+    conv_name = 'conv5'
+    relu_name = 'relu5'
+    net[conv_name] = L.Convolution(net[from_layer], num_output=128, pad=1, kernel_size=3, stride=1, **kwargs)
+    net[relu_name] = L.PReLU(net[conv_name], in_place=True)
+    net.pool5 = L.Pooling(net[relu_name], pool=P.Pooling.MAX, kernel_size=2, stride=2)
+
+#stage6
+    from_layer = 'pool5'
+    conv_name = 'conv6'
+    relu_name = 'relu6'
+    net[conv_name] = L.Convolution(net[from_layer], num_output=128, pad=1, kernel_size=3, stride=1, **kwargs)
+    net[relu_name] = L.PReLU(net[conv_name], in_place=True)
+    from_layer = 'relu6'
+    conv_name = 'conv7'
+    relu_name = 'relu7'
+    net[conv_name] = L.Convolution(net[from_layer], num_output=128, pad=1, kernel_size=3, stride=1, **kwargs)
+    net[relu_name] = L.PReLU(net[conv_name], in_place=True)
+
+def compJRes12(net, from_layer):
+    kwargs = {
+              'param': [dict(lr_mult=1, decay_mult=1), dict(lr_mult=2, decay_mult=0)],
+              'weight_filler': dict(type='xavier'),
+              'bias_filler': dict(type='constant', value=0)}
+    #stage1:
+    conv_name = 'conv1a'
+    relu_name = 'relu1a'
+    net[conv_name] = L.Convolution(net[from_layer], num_output=32, pad=1, kernel_size=3, stride=1, **kwargs)
+    net[relu_name] = L.PReLU(net[conv_name], in_place=True)
+    from_layer = relu_name
+    conv_name = 'conv1'
+    relu_name = 'relu1'
+    net[conv_name] = L.Convolution(net[from_layer], num_output=48, pad=1, kernel_size=3, stride=1, **kwargs)
+    net[relu_name] = L.PReLU(net[conv_name], in_place=True)
+    net.pool1 = L.Pooling(net[relu_name], pool=P.Pooling.MAX, kernel_size=2, stride=2)
+
+    #stage2:
+    from_layer='pool1'
+    stage_id = 2
+    output = JRes22Block(net, from_layer, stage_id, num_output=48)
+    from_layer=output
+    conv_name = 'conv2'
+    relu_name = 'relu2'
+    net[conv_name] = L.Convolution(net[from_layer], num_output=96, pad=1, kernel_size=3, stride=1, **kwargs)
+    net[relu_name] = L.PReLU(net[conv_name], in_place=True)
+    net.pool2 = L.Pooling(net[relu_name], pool=P.Pooling.MAX, kernel_size=2, stride=2)
+
+#stage3:
+    from_layer='pool2'
+    stage_id = 3
+    output = JRes22Block(net, from_layer, stage_id, num_output=96)
+    from_layer=output
+    conv_name = 'conv3'
+    relu_name = 'relu3'
+    net[conv_name] = L.Convolution(net[from_layer], num_output=192, pad=1, kernel_size=3, stride=1, **kwargs)
+    net[relu_name] = L.PReLU(net[conv_name], in_place=True)
+

@@ -27,9 +27,9 @@ resume_training = True
 remove_old_models = False
 
 # The database file for training data. Created by data/VOC0712/create_data.sh
-train_data = "/home/caffemaker/caffe/dataset/pic_video+flickr/lmdb_sf/vf_shuffle_train_lmdb"
+train_data = "/home/caffemaker/caffe/dataset/wider+aflw/lmdb/hybrid_train_lmdb"
 # The database file for testing data. Created by data/VOC0712/create_data.sh
-test_data = "/home/caffemaker/caffe/dataset/pic_video+flickr/lmdb_sf/vf_shuffle_val_lmdb"
+test_data = "/home/caffemaker/caffe/dataset/wider+aflw/lmdb/hybrid_val_lmdb"
 # Specify the batch sampler.
 resize_width = 500
 resize_height = 500
@@ -137,6 +137,23 @@ train_transform_param = {
                         P.Resize.LANCZOS4,
                         ],
                 },
+        'distort_param': {
+                'brightness_prob': 0.5,
+                'brightness_delta': 32,
+                'contrast_prob': 0.5,
+                'contrast_lower': 0.5,
+                'contrast_upper': 1.5,
+                'hue_prob': 0.5,
+                'hue_delta': 18,
+                'saturation_prob': 0.5,
+                'saturation_lower': 0.5,
+                'saturation_upper': 1.5,
+                'random_order_prob': 0.0,
+                },
+        'expand_param': {
+                'prob': 0.5,
+                'max_expand_ratio': 4.0,
+                },
         'emit_constraint': {
             'emit_type': caffe_pb2.EmitConstraint.CENTER,
             }
@@ -163,9 +180,9 @@ else:
     base_lr = 0.0005
 
 # Modify the job name if you want.
-job_name = "JRes22_SSD_{}".format(resize)
+job_name = "JRes24_SSD_{}_ex".format(resize)
 # The name of the model. Modify it if you want.
-model_name = "JRes22_SSD_{}".format(job_name)
+model_name = "JRes24_SSD_{}".format(job_name)
 
 # Directory which stores the model .prototxt file.
 save_dir = "/home/caffemaker/Z-Net/models/{}".format(job_name)
@@ -189,7 +206,7 @@ job_file = "{}/{}.sh".format(job_dir, model_name)
 # Stores the test image names and sizes. Created by data/VOC0712/create_list.sh
 name_size_file = "/home/caffemaker/caffe/dataset/pic_video+flickr/test_name_size.txt"
 # The pretrained model. We use the Fully convolutional reduced (atrous) VGGNet.
-pretrain_model = "/home/caffemaker/Z-Net/Model_Test/J-res22/face_feature_iter.caffemodel"
+pretrain_model = "/home/caffemaker/Z-Net/jobs/JRes22_SSD_500x500/save_wider_face/JRes22_SSD_JRes22_SSD_500x500_iter_260000.caffemodel"
 # Stores LabelMapItem.
 label_map_file = "/home/caffemaker/caffe/dataset/pic_video+flickr/labelmap.prototxt"
 
@@ -227,10 +244,11 @@ loss_param = {
 # parameters for generating priors.
 # minimum dimension of input image
 min_dim = 500
-mbox_source_layers = ['conv3', 'conv4', 'conv5', 'pool5']
+mbox_source_layers = ['conv4', 'conv5', 'conv7']
+# mbox_source_layers = ['conv3']
 # in percent %
 min_ratio = 5
-max_ratio = 45
+max_ratio = 30
 step = int(math.floor((max_ratio - min_ratio) / (len(mbox_source_layers) - 2)))
 min_sizes = []
 max_sizes = []
@@ -239,9 +257,11 @@ for ratio in xrange(min_ratio, max_ratio + 1, step):
   max_sizes.append(min_dim * (ratio + step) / 100.)
 min_sizes = [min_dim * 10 / 100.] + min_sizes
 max_sizes = [[]] + max_sizes
-aspect_ratios = [[], [], [], []]
+# aspect_ratios = [[], [], [], []]
+aspect_ratios = [[2],[2],[2]]
 # L2 normalize conv4_3.
-normalizations = [10, -1, -1, -1]
+normalizations = [-1, -1, -1]
+# normalizations = [1]
 # variance used to encode/decode prior bboxes.
 if code_type == P.PriorBox.CENTER_SIZE:
   prior_variance = [0.1, 0.1, 0.2, 0.2]
@@ -252,13 +272,13 @@ clip = True
 
 # Solver parameters.
 # Defining which GPUs to use.
-gpus = "0"
+gpus = "1"
 gpulist = gpus.split(",")
 num_gpus = len(gpulist)
 
 # Divide the mini-batch to different GPUs.
-batch_size = 8
-accum_batch_size = 8
+batch_size = 2
+accum_batch_size = 2
 iter_size = accum_batch_size / batch_size
 solver_mode = P.Solver.CPU
 device_id = 0
@@ -284,7 +304,7 @@ elif normalization_mode == P.Loss.FULL:
 # freeze_layers = ['conv1_1', 'conv1_2', 'conv2_1', 'conv2_2']
 
 # Evaluate on whole test set.
-num_test_image = 1800
+num_test_image = 1610
 test_batch_size = 1
 test_iter = num_test_image / test_batch_size
 
@@ -358,7 +378,7 @@ net.data, net.label = CreateAnnotatedDataLayer(train_data, batch_size=batch_size
         train=True, output_label=True, label_map_file=label_map_file,
         transform_param=train_transform_param, batch_sampler=batch_sampler)
 
-compJRes22(net, from_layer='data')
+compJRes24(net, from_layer='data')
 # ResNet10Body(net, from_layer='data')
 
 mbox_layers = CreateMultiBoxHead(net, data_layer='data', from_layers=mbox_source_layers,
@@ -383,7 +403,7 @@ net.data, net.label = CreateAnnotatedDataLayer(test_data, batch_size=test_batch_
         train=False, output_label=True, label_map_file=label_map_file,
         transform_param=test_transform_param)
 
-compJRes22(net, from_layer='data')
+compJRes24(net, from_layer='data')
 # ResNet10Body(net, from_layer='data')
 
 mbox_layers = CreateMultiBoxHead(net, data_layer='data', from_layers=mbox_source_layers,
